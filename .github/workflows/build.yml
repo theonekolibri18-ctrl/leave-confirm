@@ -1,10 +1,67 @@
 name: build-windows
+
 on:
   push:
     branches: [chesslens]
   workflow_dispatch:
+
+permissions:
+  contents: write
+
 jobs:
-  probe:
+  build:
     runs-on: windows-latest
     steps:
-      - run: echo probe
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Pakete installieren
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt pyinstaller
+
+      - name: Stockfish laden
+        shell: pwsh
+        run: ./build/get_stockfish.ps1
+
+      - name: Tests (Erkennung)
+        shell: pwsh
+        run: |
+          $env:QT_QPA_PLATFORM = "offscreen"
+          python -c "import cv2, chess, mss, PySide6; print('imports ok')"
+
+      - name: Bauen
+        run: python -m PyInstaller build/chesslens.spec --noconfirm
+
+      - name: Selbsttest der gebauten App
+        shell: pwsh
+        run: |
+          $env:QT_QPA_PLATFORM = "offscreen"
+          & dist/ChessLens/ChessLens.exe --selftest
+          if ($LASTEXITCODE -ne 0) { throw "Selbsttest fehlgeschlagen" }
+
+      - name: ZIP packen
+        shell: pwsh
+        run: |
+          Copy-Item README.md dist/ChessLens/ANLEITUNG.md
+          Compress-Archive -Path dist/ChessLens -DestinationPath ChessLens-windows.zip -Force
+          Get-Item ChessLens-windows.zip | Select-Object Name, Length
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ChessLens-windows
+          path: ChessLens-windows.zip
+
+      - name: Release anlegen
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: chesslens-v${{ github.run_number }}
+          name: ChessLens Build ${{ github.run_number }}
+          body: |
+            ChessLens für Windows – ZIP entpacken und `ChessLens\ChessLens.exe` starten.
+            Anleitung: ANLEITUNG.md im Ordner.
+          files: ChessLens-windows.zip
