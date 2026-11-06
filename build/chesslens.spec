@@ -38,6 +38,32 @@ a = Analysis(
     ],
     noarchive=False,
 )
+
+# --- Unnötige Binaries entfernen (Größe) ------------------------------------------
+import re as _re
+
+_DROP = _re.compile(
+    r"(opengl32sw\.dll|d3dcompiler_\d+\.dll|opencv_videoio_ffmpeg|libcrypto-3|libssl-3|_ssl\.pyd"
+    r"|Qt6Quick|Qt6Qml|Qt6Pdf|Qt6OpenGL|Qt6Network|Qt6VirtualKeyboard|Qt6WebEngine|Qt63D|Qt6Charts|Qt6DataVis"
+    r"|Qt6Multimedia|Qt6Sql|Qt6Test|Qt6Xml|Qt6PrintSupport|Qt6Concurrent|Qt6Labs|Qt6Graphs|Qt6Designer|Qt6Help"
+    r"|Qt6Bluetooth|Qt6Nfc|Qt6Positioning|Qt6Location|Qt6Sensors|Qt6SerialPort|Qt6RemoteObjects|Qt6Scxml"
+    r"|Qt6StateMachine|Qt6TextToSpeech|Qt6WebSockets|Qt6WebChannel|Qt6HttpServer|Qt6NetworkAuth|Qt6UiTools"
+    r"|Qt6SpatialAudio|Qt6ShaderTools|Qt6Svg(Widgets)?\.dll$X|Qt6WebView|Qt6Core5Compat"
+    r"|PySide6[\\/]+(qml|translations|examples|typesystems|glue|include|scripts)[\\/]"
+    r"|PySide6[\\/]+Qt(Quick|Qml|Pdf|OpenGL|Network|Multimedia|Sql|Test|Xml|PrintSupport|Concurrent|Charts|DataVisualization|WebEngine|3D|Bluetooth|Nfc|Positioning|Location|Sensors|SerialPort|RemoteObjects|Scxml|StateMachine|TextToSpeech|WebSockets|WebChannel|HttpServer|NetworkAuth|Designer|Help|UiTools|SpatialAudio|Graphs|WebView|Core5Compat|Labs)[A-Za-z0-9]*\.pyd"
+    r"|[\\/]plugins[\\/](qmltooling|scenegraph|sqldrivers|multimedia|networkinformation|tls|position|sensors|texttospeech|webview|virtualkeyboard|printsupport|designer|help|qmllint|sceneparsers|renderers|geometryloaders|canbus|generic)[\\/])",
+    _re.IGNORECASE,
+)
+
+
+def _keep(entry):
+    name = entry[0]
+    return not _DROP.search(name)
+
+
+a.binaries = [b for b in a.binaries if _keep(b)]
+a.datas = [d for d in a.datas if _keep(d)]
+
 pyz = PYZ(a.pure)
 
 exe = EXE(

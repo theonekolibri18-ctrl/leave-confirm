@@ -107,6 +107,7 @@ class Scanner(QThread):
         self._last_status = ("", "")
         self._bad_frames = 0
         self._last_scan_ms = 0.0
+        self._last_fp: Optional[np.ndarray] = None
 
     # ---- Steuerung von außen ----------------------------------------------
     def request_frame(self) -> None:
@@ -238,6 +239,11 @@ class Scanner(QThread):
 
         # --- Zellen / Grundstellung -----------------------------------------
         cells = extract_cells(img, rect)
+        # Unverändertes Brettbild? Dann Erkennung sparen (nur den Entprell-Zähler weiterzählen)
+        fp = cells.reshape(64, -1, 3).mean(axis=1).astype(np.float32)
+        if self._last_fp is not None and np.abs(fp - self._last_fp).max() < 2.0 and self.tracker._pending_count >= self.tracker.stable_frames:
+            return
+        self._last_fp = fp
         masks, occ, lum = analyze_cells(cells)
         if start_pattern_matches(occ):
             if not self._learned_start:
