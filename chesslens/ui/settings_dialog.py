@@ -15,6 +15,7 @@ from ..settings import Settings
 
 class SettingsDialog(QDialog):
     calibrate_requested = Signal()
+    dump_requested = Signal()
     profile_deleted = Signal(str)
     profile_selected = Signal(str)
 
@@ -46,10 +47,14 @@ class SettingsDialog(QDialog):
         f1.addRow("ChessLens anzeigen auf", self.cb_display)
         self.btn_calib = QPushButton("Brett von Hand festlegen …")
         self.btn_calib.clicked.connect(self.calibrate_requested)
+        self.btn_dump = QPushButton("Diagnose speichern")
+        self.btn_dump.setToolTip("Speichert Screenshot, Brett-Ausschnitt und Erkennung unter %APPDATA%\\ChessLens\\diagnose – zum Weiterschicken bei Problemen")
+        self.btn_dump.clicked.connect(self.dump_requested)
         self.lbl_calib = QLabel("Brett wird automatisch gesucht" if not settings.manual_rect else "Brett ist von Hand festgelegt")
         self.lbl_calib.setObjectName("muted")
         row = QHBoxLayout()
         row.addWidget(self.btn_calib)
+        row.addWidget(self.btn_dump)
         row.addWidget(self.lbl_calib, 1)
         f1.addRow("Erkennung", row)
         lay.addWidget(g1)

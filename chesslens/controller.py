@@ -108,10 +108,67 @@ class Scanner(QThread):
         self._bad_frames = 0
         self._last_scan_ms = 0.0
         self._last_fp: Optional[np.ndarray] = None
+        self._want_dump = False
+        self._last_screen: Optional[list[list[str]]] = None
 
     # ---- Steuerung von außen ----------------------------------------------
     def request_frame(self) -> None:
         self._want_frame = True
+
+    def request_dump(self) -> None:
+        """Speichert beim nächsten Scan Screenshot, Brett-Ausschnitt und Erkennung zur Fehlersuche."""
+        self._want_dump = True
+        self._last_fp = None
+
+    def _dump(self, img: np.ndarray, rect: Optional[BoardRect], cells: Optional[np.ndarray], screen) -> None:
+        import cv2
+        from .settings import data_dir
+        from .piece_recog import foreground_mask
+
+        d = os.path.join(data_dir(), "diagnose")
+        os.makedirs(d, exist_ok=True)
+        cv2.imwrite(os.path.join(d, "01_bildschirm.png"), img)
+        info = [f"Monitor: {self.settings.capture_monitor}", f"Profil: {self.active.name if self.active else '-'}",
+                f"Weiß unten: {self.tracker.bottom_is_white}", f"Manuelles Brett: {self.settings.manual_rect}"]
+        if rect is not None:
+            x, y, sz = rect.as_int()
+            info.append(f"Brett: x={x} y={y} größe={sz} score={rect.score:.2f} hell={rect.light} dunkel={rect.dark}")
+            crop = img[max(0, y):y + sz, max(0, x):x + sz].copy()
+            for k in range(9):
+                cv2.line(crop, (int(k * sz / 8), 0), (int(k * sz / 8), sz), (0, 0, 255), 1)
+                cv2.line(crop, (0, int(k * sz / 8)), (sz, int(k * sz / 8)), (0, 0, 255), 1)
+            cv2.imwrite(os.path.join(d, "02_brett.png"), crop)
+        else:
+            info.append("Brett: nicht gefunden")
+        if cells is not None:
+            tiles = []
+            for r in range(8):
+                row = []
+                for c in range(8):
+                    cell = cells[r, c]
+                    m, _ = foreground_mask(cell)
+                    vis = cell.copy()
+                    vis[m] = (0.5 * vis[m] + (0, 0, 127)).astype(np.uint8)
+                    label = screen[r][c] if screen else ""
+                    tile = np.hstack([cell, vis])
+                    tile = cv2.copyMakeBorder(tile, 14, 0, 0, 0, cv2.BORDER_CONSTANT, value=(30, 30, 30))
+                    cv2.putText(tile, label or "-", (2, 11), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1)
+                    row.append(tile)
+                tiles.append(np.hstack(row))
+            cv2.imwrite(os.path.join(d, "03_felder_erkennung.png"), np.vstack(tiles))
+            if screen:
+                info.append("Erkannt (Bildschirm-Reihenfolge, oben nach unten):")
+                info += ["  " + " ".join(p or "--" for p in row) for row in screen]
+        info.append(f"Tracker-FEN: {self.tracker.board.fen()}")
+        with open(os.path.join(d, "00_info.txt"), "w", encoding="utf-8") as f:
+            f.write("\n".join(info) + "\n")
+        log.info("Diagnose gespeichert in %s", d)
+        self.status.emit(f"Diagnose gespeichert: {d}", "ok")
+        try:
+            if os.name == "nt":
+                os.startfile(d)  # type: ignore[attr-defined]
+        except Exception:  # noqa: BLE001
+            pass
 
     def set_exclusion(self, rect_global: Optional[tuple[int, int, int, int]]) -> None:
         self._exclude = rect_global
@@ -230,6 +287,9 @@ class Scanner(QThread):
                 if rect is None:
                     self.rect = None
                     self.board_state.emit(None)
+                    if self._want_dump:
+                        self._want_dump = False
+                        self._dump(img, None, None, None)
                     self._set_status(f"Suche Schachbrett auf Monitor {self.settings.capture_monitor} …", "search")
                     return
                 self._misses = 0
@@ -277,12 +337,19 @@ class Scanner(QThread):
                 self.settings.active_profile = cand.name
                 log.info("Profil gewählt: %s", cand.name)
         if self.active is None:
+            if self._want_dump:
+                self._want_dump = False
+                self._dump(img, rect, cells, None)
             self._set_status("Bitte eine neue Partie starten (Grundstellung), damit ich die Figuren lernen kann", "search")
             return
 
         # --- Figuren erkennen -------------------------------------------------
         res, _ = classify(cells, self.active)
         screen = [[res[r][c].piece for c in range(8)] for r in range(8)]
+        self._last_screen = screen
+        if self._want_dump:
+            self._want_dump = False
+            self._dump(img, rect, cells, screen)
         grid = screen_to_grid(screen, self.tracker.bottom_is_white)
         if not position_plausible(grid):
             self._bad_frames += 1

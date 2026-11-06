@@ -68,6 +68,8 @@ Die systemweiten Kürzel lassen sich in den Einstellungen abschalten.
 | Figuren werden falsch erkannt | Einstellungen → Profil löschen und mit einer neuen Partie neu lernen. Verschiedene Brettfarben derselben Plattform sind kein Problem. |
 | Stockfish fehlt | Das ZIP komplett entpacken; der Ordner `_internal\stockfish` muss vorhanden sein. |
 
+**Diagnose:** Einstellungen → **„Diagnose speichern“** legt Screenshot, Brett-Ausschnitt und die Erkennung aller 64 Felder unter `%APPDATA%\ChessLens\diagnose` ab (der Ordner öffnet sich automatisch). Diese Bilder zeigen genau, was ChessLens sieht – ideal zum Weiterschicken, wenn etwas nicht erkannt wird.
+
 Log-Datei bei Fehlern: `%APPDATA%\ChessLens\chesslens.log`.
 
 ## Selbst bauen

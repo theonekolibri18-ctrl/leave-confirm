@@ -179,11 +179,27 @@ class MainWindow(QMainWindow):
         self.setGeometry(g.x() + (g.width() - w) // 2, g.y() + (g.height() - h) // 2, w, h)
 
     def _update_exclusion(self) -> None:
-        fg = self.frameGeometry()
+        """Eigenes Fenster nur dann aus der Aufnahme ausblenden, wenn es auf dem Capture-Monitor liegt."""
         scr = self.screen()
-        dpr = scr.devicePixelRatio() if scr else 1.0
-        # mss liefert physische Pixel, Qt logische -> umrechnen
-        self.scanner.set_exclusion((int(fg.x() * dpr), int(fg.y() * dpr), int(fg.width() * dpr), int(fg.height() * dpr)))
+        if scr is None:
+            self.scanner.set_exclusion(None)
+            return
+        dpr = scr.devicePixelRatio()
+        sg = scr.geometry()
+        mons = {m.index: m for m in self.scanner.capture.monitors()}
+        mon = mons.get(self.settings.capture_monitor)
+        if mon is None:
+            self.scanner.set_exclusion(None)
+            return
+        same = abs(sg.x() * dpr - mon.left) < 4 and abs(sg.y() * dpr - mon.top) < 4
+        if not same:
+            self.scanner.set_exclusion(None)
+            return
+        fg = self.frameGeometry()
+        # Fensterposition relativ zum Bildschirm, in physischen Pixeln (mss)
+        x = mon.left + int((fg.x() - sg.x()) * dpr)
+        y = mon.top + int((fg.y() - sg.y()) * dpr)
+        self.scanner.set_exclusion((x, y, int(fg.width() * dpr), int(fg.height() * dpr)))
 
     def _global_hotkeys(self) -> None:
         if not self.settings.hotkeys:
@@ -413,6 +429,7 @@ class MainWindow(QMainWindow):
         dlg = SettingsDialog(self.settings, self.scanner.capture.monitors(), sorted(self.store.profiles),
                              self.settings.active_profile, self)
         dlg.calibrate_requested.connect(lambda: (dlg.accept(), self.scanner.request_frame()))
+        dlg.dump_requested.connect(lambda: (dlg.accept(), self.scanner.request_dump()))
         dlg.profile_deleted.connect(self._delete_profile)
         dlg.profile_selected.connect(self._select_profile)
         if dlg.exec():
