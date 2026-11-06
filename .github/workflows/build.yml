@@ -1,0 +1,10 @@
+name: build-windows
+on:
+  push:
+    branches: [chesslens]
+  workflow_dispatch:
+jobs:
+  probe:
+    runs-on: windows-latest
+    steps:
+      - run: echo probe
