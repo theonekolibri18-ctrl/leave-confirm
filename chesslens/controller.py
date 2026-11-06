@@ -128,6 +128,7 @@ class Scanner(QThread):
         self._emit_position(new_game=False, resynced=True)
 
     def flip_board(self) -> None:
+        self.tracker.auto_orient = False  # Nutzer hat entschieden
         self.tracker.set_orientation(not self.tracker.bottom_is_white)
         self.settings.bottom_is_white = self.tracker.bottom_is_white
         # Stellung aus Sicht der neuen Orientierung neu lesen
@@ -254,6 +255,7 @@ class Scanner(QThread):
                         self.active = prof
                         self.settings.active_profile = prof.name
                         self.tracker.set_orientation(bottom_white)
+                        self.tracker.auto_orient = True
                         self.settings.bottom_is_white = bottom_white
                         self._learned_start = True
                         self.calibrated.emit(prof.name)

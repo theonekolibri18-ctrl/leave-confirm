@@ -39,14 +39,14 @@ Ein Stil darf nur Züge wählen, die höchstens eine bestimmte Spanne schlechter
 
 ## Tasten und Knöpfe
 
-| Taste | Wirkung |
-|---|---|
-| **F9** | Pause / Fortsetzen |
-| **F10** | Brett neu suchen (z. B. nach Fensterwechsel) |
-| **F11** | Zugrecht tauschen – wenn nach einem Neustart mitten in der Partie die falsche Seite am Zug ist |
-| **F12** | Brett drehen – wenn Weiß und Schwarz vertauscht angezeigt werden |
+| Im ChessLens-Fenster | Überall (auch wenn das Schach im Vordergrund ist) | Wirkung |
+|---|---|---|
+| **F9** | **Strg+Alt+P** | Pause / Fortsetzen |
+| **F10** | **Strg+Alt+B** | Brett neu suchen (z. B. nach Fensterwechsel) |
+| **F11** | **Strg+Alt+Z** | Zugrecht tauschen – wenn nach einem Neustart mitten in der Partie die falsche Seite am Zug ist |
+| **F12** | **Strg+Alt+D** | Brett drehen – wenn Weiß und Schwarz vertauscht angezeigt werden |
 
-Die Tasten wirken systemweit, auch wenn das Schachfenster im Vordergrund ist (abschaltbar in den Einstellungen).
+Die systemweiten Kürzel lassen sich in den Einstellungen abschalten.
 
 ## Einstellungen
 

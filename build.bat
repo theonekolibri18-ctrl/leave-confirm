@@ -18,7 +18,9 @@ echo [3/4] Bauen ...
 python -m PyInstaller build\chesslens.spec --noconfirm || goto :fail
 
 echo [4/4] Selbsttest ...
-dist\ChessLens\ChessLens.exe --selftest || goto :fail
+start /wait "" dist\ChessLens\ChessLens.exe --selftest
+if errorlevel 1 goto :fail
+type chesslens-selftest.txt
 
 echo.
 echo Fertig: dist\ChessLens\ChessLens.exe

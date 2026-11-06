@@ -38,6 +38,13 @@ class StyleBridge(QObject):
     ranked = Signal(str, object)  # (fen, list[Choice])
 
 
+class HotkeyBridge(QObject):
+    fired = Signal(str)
+
+
+GLOBAL_HOTKEYS = {"pause": "ctrl+alt+p", "redetect": "ctrl+alt+b", "turn": "ctrl+alt+z", "flip": "ctrl+alt+d"}
+
+
 class MainWindow(QMainWindow):
     def __init__(self, settings: Settings) -> None:
         super().__init__()
@@ -124,10 +131,13 @@ class MainWindow(QMainWindow):
         self.topbar.style_changed.connect(self.on_style_changed)
 
         # --- Tastenkürzel -------------------------------------------------------------
-        QShortcut(QKeySequence("F9"), self, self.toggle_pause)
-        QShortcut(QKeySequence("F10"), self, self.scanner.redetect)
-        QShortcut(QKeySequence("F11"), self, self.scanner.flip_turn)
-        QShortcut(QKeySequence("F12"), self, self.scanner.flip_board)
+        for keys, fn in (("F9", self.toggle_pause), ("F10", self.scanner.redetect), ("F11", self.scanner.flip_turn),
+                         ("F12", self.scanner.flip_board), ("Ctrl+Alt+P", self.toggle_pause),
+                         ("Ctrl+Alt+B", self.scanner.redetect), ("Ctrl+Alt+Z", self.scanner.flip_turn),
+                         ("Ctrl+Alt+D", self.scanner.flip_board)):
+            QShortcut(QKeySequence(keys), self, fn)
+        self.hotkey_bridge = HotkeyBridge()
+        self.hotkey_bridge.fired.connect(self._on_hotkey)
         self._global_hotkeys()
 
         self._place_on_display_monitor()
@@ -170,7 +180,10 @@ class MainWindow(QMainWindow):
 
     def _update_exclusion(self) -> None:
         fg = self.frameGeometry()
-        self.scanner.set_exclusion((fg.x(), fg.y(), fg.width(), fg.height()))
+        scr = self.screen()
+        dpr = scr.devicePixelRatio() if scr else 1.0
+        # mss liefert physische Pixel, Qt logische -> umrechnen
+        self.scanner.set_exclusion((int(fg.x() * dpr), int(fg.y() * dpr), int(fg.width() * dpr), int(fg.height() * dpr)))
 
     def _global_hotkeys(self) -> None:
         if not self.settings.hotkeys:
@@ -178,12 +191,14 @@ class MainWindow(QMainWindow):
         try:
             import keyboard  # type: ignore
 
-            keyboard.add_hotkey("f9", lambda: QTimer.singleShot(0, self.toggle_pause))
-            keyboard.add_hotkey("f10", lambda: QTimer.singleShot(0, self.scanner.redetect))
-            keyboard.add_hotkey("f11", lambda: QTimer.singleShot(0, self.scanner.flip_turn))
-            keyboard.add_hotkey("f12", lambda: QTimer.singleShot(0, self.scanner.flip_board))
+            for name, combo in GLOBAL_HOTKEYS.items():
+                keyboard.add_hotkey(combo, lambda n=name: self.hotkey_bridge.fired.emit(n))
         except Exception as e:  # noqa: BLE001
             log.info("Globale Tastenkürzel nicht verfügbar: %s", e)
+
+    def _on_hotkey(self, name: str) -> None:
+        {"pause": self.toggle_pause, "redetect": self.scanner.redetect,
+         "turn": self.scanner.flip_turn, "flip": self.scanner.flip_board}[name]()
 
     def closeEvent(self, event) -> None:  # noqa: N802
         g = self.geometry()
@@ -242,7 +257,7 @@ class MainWindow(QMainWindow):
             return
         kicker = "Analysiere …"
         self.panel.show_analysis(kicker, "…", "Stockfish rechnet", "", "", [], [],
-                                 hint="Zugrecht geschätzt – mit F11 tauschen, falls falsch." if not upd.synced and upd.resynced else "")
+                                 hint="Zugrecht geschätzt – mit „Zugrecht“ (F11) tauschen, falls falsch." if not upd.synced and upd.resynced else "")
         if self.engine and not self.paused:
             multipv = 3 if self.settings.style == "engine" else 5
             self.engine.analyse(board, multipv=multipv, seconds=self.settings.engine_seconds)

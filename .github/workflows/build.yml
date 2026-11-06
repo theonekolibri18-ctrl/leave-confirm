@@ -41,8 +41,9 @@ jobs:
         shell: pwsh
         run: |
           $env:QT_QPA_PLATFORM = "offscreen"
-          & dist/ChessLens/ChessLens.exe --selftest
-          if ($LASTEXITCODE -ne 0) { throw "Selbsttest fehlgeschlagen" }
+          $p = Start-Process -FilePath (Resolve-Path dist/ChessLens/ChessLens.exe) -ArgumentList "--selftest" -Wait -PassThru -NoNewWindow
+          if (Test-Path chesslens-selftest.txt) { Get-Content chesslens-selftest.txt }
+          if ($p.ExitCode -ne 0) { throw "Selbsttest fehlgeschlagen (Exit $($p.ExitCode))" }
 
       - name: ZIP packen
         shell: pwsh

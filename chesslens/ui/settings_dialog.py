@@ -91,7 +91,7 @@ class SettingsDialog(QDialog):
         self.ck_alts.setChecked(settings.show_alternatives)
         self.ck_sound = QCheckBox("Ton, wenn ein neuer Vorschlag da ist")
         self.ck_sound.setChecked(settings.sound)
-        self.ck_hotkeys = QCheckBox("Globale Tastenkürzel (F9 Pause, F10 Brett suchen, F11 Zugrecht, F12 drehen)")
+        self.ck_hotkeys = QCheckBox("Systemweite Tastenkürzel: Strg+Alt+P Pause, Strg+Alt+B Brett suchen, Strg+Alt+Z Zugrecht, Strg+Alt+D drehen")
         self.ck_hotkeys.setChecked(settings.hotkeys)
         v3.addWidget(self.ck_alts)
         v3.addWidget(self.ck_sound)

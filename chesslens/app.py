@@ -19,7 +19,38 @@ def setup_logging() -> None:
 
 
 def selftest() -> int:
-    """Prüft den gebauten Stand ohne Fenster: Engine, Erkennung, Assets. Exit-Code 0 = ok."""
+    """Prüft den gebauten Stand ohne Fenster: Engine, Erkennung, Assets. Exit-Code 0 = ok.
+
+    Schreibt das Ergebnis nach chesslens-selftest.txt (eine Fenster-.exe hat keine Konsole).
+    """
+    out_path = os.path.join(os.getcwd(), "chesslens-selftest.txt")
+    lines: list[str] = []
+
+    def say(*parts) -> None:
+        msg = " ".join(str(p) for p in parts)
+        lines.append(msg)
+        try:
+            if sys.stdout:
+                print(msg)
+        except Exception:  # noqa: BLE001
+            pass
+
+    try:
+        code = _selftest_impl(say)
+    except Exception as e:  # noqa: BLE001
+        import traceback
+        say("FEHLER:", e)
+        say(traceback.format_exc())
+        code = 1
+    try:
+        with open(out_path, "w", encoding="utf-8") as f:
+            f.write("\n".join(lines) + "\n")
+    except Exception:  # noqa: BLE001
+        pass
+    return code
+
+
+def _selftest_impl(print) -> int:  # noqa: A002
     os.environ["QT_QPA_PLATFORM"] = "offscreen"
     import cv2
     from PySide6.QtWidgets import QApplication

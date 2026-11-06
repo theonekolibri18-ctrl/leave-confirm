@@ -90,6 +90,7 @@ class GameTracker:
         self._pending_grid: Optional[list[list[str]]] = None
         self._pending_count = 0
         self.stable_frames = 2  # so oft muss dieselbe Stellung hintereinander erkannt werden
+        self.auto_orient = True  # Orientierung bei unsicherer Stellung automatisch schätzen
 
     # ------------------------------------------------------------------
     @property
@@ -107,7 +108,7 @@ class GameTracker:
     # ------------------------------------------------------------------
     def update_from_screen(self, screen_grid: list[list[str]]) -> UpdateResult:
         """screen_grid: 8x8 in Bildschirm-Orientierung ('' oder 'wK' ...)."""
-        if not self.synced or self.board.fullmove_number == 1 and not self.board.move_stack:
+        if self.auto_orient and (not self.synced or (self.board.fullmove_number == 1 and not self.board.move_stack)):
             # Orientierung unbekannt/unsicher: aus der Stellung schätzen
             guess = guess_orientation(screen_grid, self.bottom_is_white)
             if guess != self.bottom_is_white:
